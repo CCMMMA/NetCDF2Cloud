@@ -1,5 +1,7 @@
 import json
 
+import prettyprint as pp
+
 from netCDF4 import Dataset
 from os import mkdir, path, remove
 from NetCDF2JSON import NetCDF2JSON
@@ -16,8 +18,17 @@ def calc_divisors(num):
 
 
 if __name__ == "__main__":
+    #filename = "http://data.meteo.uniparthenope.it/opendap/opendap/rms3" \
+    #           "/d03/history/2020/03/29/rms3_d03_20200329Z1200.nc"
+
+    #filename = "http://data.meteo.uniparthenope.it/opendap/opendap/wrf5" \
+    #            "/d01/archive/2020/03/29/wrf5_d01_20200329Z1200.nc"
+
+    #filename = "http://data.meteo.uniparthenope.it/opendap/opendap/ww33" \
+    #           "/d01/archive/2020/03/29/ww33_d01_20200329Z1200.nc"
+
     filename = "http://data.meteo.uniparthenope.it/opendap/opendap/rms3" \
-               "/d03/history/2020/03/29/rms3_d03_20200329Z1200.nc"
+               "/d03/archive/2020/03/29/rms3_d03_20200329Z1200.nc"
 
     #netCDF2JSON = NetCDF2JSON(filename)
 
@@ -30,23 +41,44 @@ if __name__ == "__main__":
     for dimension in rootgrp.dimensions.values():
         dimensions_divisors[str(dimension.name)] = calc_divisors(len(dimension))
 
-    centerM = 8.192
+    print (json.dumps(dimensions_divisors, indent=2, sort_keys=True))
+
+    #center = 16384
+    center = 8192
+    #center = 4096
+    #center = 2048
     time = 1
     level = 1
     dtype = 4
     sizes = []
-    X_DIM = "xi_rho"
-    Y_DIM = "eta_rho"
-    print(dimensions_divisors[Y_DIM], dimensions_divisors[X_DIM])
-    for j in range(1, len(dimensions_divisors[Y_DIM])-1):
+    #X_DIM = "xi_rho"
+    #Y_DIM = "eta_rho"
+    X_DIM="longitude"
+    Y_DIM="latitude"
+
+    print(Y_DIM)
+    print(dimensions_divisors[Y_DIM])
+    print("--------")
+    print(X_DIM)
+    print(dimensions_divisors[X_DIM])
+    print("--------")
+
+    y_size = dimensions_divisors[Y_DIM][-1]
+    x_size = dimensions_divisors[X_DIM][-1]
+    xy_size = y_size * x_size * dtype
+    print(y_size,x_size, xy_size)
+    print("-------")
+    for j in range(0, len(dimensions_divisors[Y_DIM])):
         new = []
-        for i in range(1, len(dimensions_divisors[X_DIM])-1):
-            
-            new.append(abs(centerM-float(
-                dtype*time*level *
-                (dimensions_divisors[Y_DIM][-1]/dimensions_divisors[Y_DIM][j]) *
-                (dimensions_divisors[X_DIM][-1]/dimensions_divisors[X_DIM][i])
-            )/1024000.0))
+        m = dimensions_divisors[Y_DIM][j]
+        for i in range(0, len(dimensions_divisors[X_DIM])):
+
+            n = dimensions_divisors[X_DIM][i]
+            q = xy_size / (n*m)
+            f=abs(center-q)
+            print(m, n, q, f)
+
+            new.append(f)
 
         sizes.append(new)
     print(sizes)
@@ -55,11 +87,13 @@ if __name__ == "__main__":
     j0 = -1
     i0 = -1
     for j in range(0, len(sizes)):
-        for i in range(1, len(sizes[j])):
+        for i in range(0, len(sizes[j])):
+            print (sizes[j][i], minVal)
             if sizes[j][i] < minVal:
                 minVal = sizes[j][i]
-                j0 = j+1
-                i0 = i+1
+                j0 = j
+                i0 = i
+    print(minVal)
     print(j0, i0, dimensions_divisors[Y_DIM][j0], dimensions_divisors[X_DIM][i0])
     exit(0)
 
